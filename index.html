@@ -97,7 +97,9 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);font-size:12.5px;verti
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#f8fafc}
 .r-invest td{background:#faf5ff}.r-invest:hover td{background:#ede9fe}
-.r-transfer td{background:#eff6ff}.r-transfer:hover td{background:#dbeafe}
+.r-transfer td{background:#eff6ff}
+
+.r-transfer:hover td{background:#dbeafe}
 .r-cc td{background:#fff1f2}.r-cc:hover td{background:#ffe4e6}
 .r-expense td{background:#fffbeb}.r-expense:hover td{background:#fef3c7}
 .tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600}
@@ -704,7 +706,47 @@ tr:hover td{background:#f8fafc}
     <div class="tbl-wrap" id="inv-wrap"></div>
   </div>
 
-  <!-- Investment Breakdown Pie Chart -->
+  <!-- Demat / Trading Wallet panel -->
+  <div style="background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="font-weight:700;font-size:15px;color:var(--text);display:flex;align-items:center;gap:8px">&#128202; Demat / Trading Wallet</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--text3)">Opening balance</label>
+        <input type="number" id="demat-ob" style="width:120px;padding:6px 8px;font-size:13px;border:1px solid var(--border);border-radius:8px" placeholder="0" onchange="setDematOB(this.value)"/>
+      </div>
+    </div>
+    
+    <div style="padding:10px 16px 14px;border-bottom:1px solid var(--border);background:rgba(124,58,237,.04)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">Log Profit / Funds (month-wise)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="demat-log-month" style="padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px;max-width:120px">
+          <option value="">Month</option>
+          <option>Apr</option><option>May</option><option>Jun</option><option>Jul</option>
+          <option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option>
+          <option>Dec</option><option>Jan</option><option>Feb</option><option>Mar</option>
+        </select>
+        <select id="demat-log-type" style="padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px">
+          <option value="profit">Profit (+)</option>
+          <option value="loss">Loss (&minus;)</option>
+          <option value="funds">Add Funds (+)</option>
+        </select>
+        <input type="number" id="demat-log-amt" placeholder="Amount" style="width:120px;padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px"/>
+        <button class="btn btn-blue" style="padding:7px 14px;font-size:13px" onclick="logDematEntry()">+ Log</button>
+        <span id="demat-log-status" style="font-size:12px"></span>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="demat-wrap"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);background:#f8fafc;font-size:11.5px;color:var(--text3);line-height:1.7">
+      <b style="color:var(--text2)">&#128221; Notes</b><br>
+      &bull; <b>Add money:</b> record a transaction From your bank To &ldquo;Demat Wallet&rdquo; (or use Log Funds above).<br>
+      &bull; <b>Profit:</b> use <b>Log Profit</b> above, or record From an income source To &ldquo;Demat Wallet&rdquo;.<br>
+      &bull; <b>Withdraw / Loss:</b> record From &ldquo;Demat Wallet&rdquo; To your bank, or use Log Loss above.<br>
+      &bull; Each month's opening balance carries forward automatically from the previous month's closing.
+    </div>
+  </div>
+</div>
+
+<!-- Investment Breakdown Pie Chart -->
   <div style="background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
       <div style="font-size:13px;font-weight:600;color:var(--text)">Investment Breakdown</div>
@@ -721,14 +763,13 @@ tr:hover td{background:#f8fafc}
         Portfolio
       </button>
     </div>
-    <div style="padding:18px;display:flex;align-items:center;gap:28px">
-      <div style="flex-shrink:0;width:200px"><canvas id="invest-pie-chart"></canvas></div>
-      <div id="invest-pie-legend" style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:12px"></div>
+    <div style="padding:18px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div style="flex-shrink:0;width:190px"><canvas id="invest-pie-chart"></canvas></div>
+      <div id="invest-pie-legend" style="flex:1;min-width:240px;max-width:420px;font-size:12px"></div>
     </div>
   </div>
-</div>
 
-<!-- BUDGET -->
+  <!-- BUDGET -->
 <div class="pane" id="pane-budget">
   <div class="fy-bar"><span class="fy-bar-label">⚖️ Budget Planner</span><span class="fy-tag"><select id="tfy-budget" onchange="setTabFY('budget',this.value)"></select></span></div>
     <div style="background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden">
@@ -1114,6 +1155,10 @@ tr:hover td{background:#f8fafc}
 
 
 <script>/* ================================================================
+
+// (info-icon tooltips use native title attribute)
+
+
  * FinTrack — Personal Finance Dashboard
  * © Tushar Jain. All rights reserved.
  * Designed and built by Tushar Jain.
@@ -1249,6 +1294,9 @@ function defaultFromOptions() {
         {id:'c2',lbl:'My Credit Card 2', ck:'SBI Credit Card'},
         {id:'c3',lbl:'My Credit Card 3', ck:'HDFC Credit Card'},
         {id:'c4',lbl:'My Credit Card 4', ck:'Amazon ICICI Credit Card'}
+    ]},
+    { id:'demat', name:'Demat / Trading Wallet', items:[
+        {id:'d1',lbl:'Demat / Trading Wallet', ck:'Demat Wallet'}
     ]}
   ];
 }
@@ -1292,6 +1340,7 @@ var txnMon = 'all';
 var msMon  = 'all';
 
 function ensureData() {
+  if(S.dematOB===undefined) S.dematOB=0;
   if(S.cloudKeyType===undefined) S.cloudKeyType='access';
   if (!S.sections)    S.sections    = defaultSections();
   if (!S.fromOptions) S.fromOptions = defaultFromOptions();
@@ -1425,7 +1474,7 @@ function rebuildAllDropdowns() {
     }).join('');
   // Transaction To: only Bank Accounts as transfer target (not credit cards), then all sections
   toSel.innerHTML='<option value="">— Select To —<\/option>'+
-    S.fromOptions.filter(function(grp){return grp.id==='banks';}).map(function(grp){
+    S.fromOptions.filter(function(grp){return grp.id==='banks'||grp.id==='demat';}).map(function(grp){
       return '<optgroup label="'+grp.name+' (Transfer To)">'+
         grp.items.map(function(i){return '<option value="'+escapeHtml(i.ck)+'">'+escapeHtml(i.lbl)+'<\/option>';}).join('')+
         '<\/optgroup>';
@@ -1945,9 +1994,20 @@ function renderDash() {
   var expByMon=MONTHS.map(function(m){
     return S.txns.filter(function(t){
       if(!inFY(t.date,fy)||toMon(t.date)!==m||incSrc.indexOf(t.from)>=0) return false;
-      var isBk=S.fromOptions.filter(function(g){return g.id==='banks';}).some(function(g){return g.items.some(function(i){return i.ck===t.to;});});
+      var isBk=S.fromOptions.filter(function(g){return g.id==='banks'||g.id==='demat';}).some(function(g){return g.items.some(function(i){return i.ck===t.to;});});
+      // Exclude demat wallet internal markers (loss/withdraw bookkeeping)
+      if(t.to==='Trading Loss'||t.from==='Demat Wallet') return false;
       return !isBk;
     }).reduce(function(a,t){return a+(+t.amt||0);},0);
+  });
+  // Category-wise monthly outflow for the stacked dashboard chart
+  var invByMon=MONTHS.map(function(m){return sumSection('investments',m,fy);});
+  var loanByMon=MONTHS.map(function(m){return sumSection('loans',m,fy);});
+  var ccByMon=MONTHS.map(function(m){return sumSection('ccbills',m,fy);});
+  // 'Expenses' segment = total non-bank outflow minus the categorised sections above
+  var expCatByMon=MONTHS.map(function(m,i){
+    var other=expByMon[i]-invByMon[i]-loanByMon[i]-ccByMon[i];
+    return other>0?other:0;
   });
   setTimeout(function(){
     // Cash Flow Chart
@@ -1956,10 +2016,13 @@ function renderDash() {
     _cashflowChart=new Chart(cfCtx,{type:'bar',
       data:{labels:MONTHS,datasets:[
         {label:'Income',data:incByMon,backgroundColor:'#34d399',borderRadius:5,borderSkipped:false},
-        {label:'Expenses',data:expByMon,backgroundColor:'#f87171',borderRadius:5,borderSkipped:false}
+        {label:'Expenses',data:expCatByMon,backgroundColor:'#f87171',borderRadius:{topLeft:0,topRight:0,bottomLeft:5,bottomRight:5},borderSkipped:false},
+        {label:'Investments',data:invByMon,backgroundColor:'#7c3aed',borderRadius:0,borderSkipped:false},
+        {label:'Loans / EMI',data:loanByMon,backgroundColor:'#d97706',borderRadius:0,borderSkipped:false},
+        {label:'CC Bills',data:ccByMon,backgroundColor:'#2563eb',borderRadius:{topLeft:5,topRight:5,bottomLeft:0,bottomRight:0},borderSkipped:false}
       ]},
       options:{responsive:true,maintainAspectRatio:true,
-        plugins:{legend:{display:false},
+        plugins:{legend:{display:true,position:'bottom',labels:{color:'rgba(255,255,255,.7)',font:{size:10},boxWidth:12,padding:10,usePointStyle:true,pointStyle:'rectRounded'}},
           tooltip:{backgroundColor:'rgba(7,13,26,.95)',titleColor:'#fff',bodyColor:'rgba(255,255,255,.75)',
             borderColor:'rgba(255,255,255,.12)',borderWidth:1,padding:10,
             callbacks:{label:function(c){return '  '+c.dataset.label+': ₹'+c.raw.toLocaleString('en-IN');}}}},
@@ -2304,6 +2367,96 @@ function renderCC(){
 }
 
 // ═══ INVESTMENTS ═══════════════════════════════════════
+// ── DEMAT / TRADING WALLET (Feature: wallet tracking) ──
+var DEMAT_CK="Demat Wallet";
+function setDematOB(v){
+  if(!S.dematOB) S.dematOB=0;
+  S.dematOB=parseFloat(v)||0;
+  save();
+  renderDematWallet();
+}
+function renderDematWallet(){
+  ensureData();
+  var fy=getFY("invest");
+  if(S.dematOB===undefined) S.dematOB=0;
+  var obEl=document.getElementById("demat-ob");
+  if(obEl && document.activeElement!==obEl) obEl.value=S.dematOB||"";
+  // Auto-carry: each month's opening = previous month's closing.
+  // Starting opening (Apr) = S.dematOB.
+  var opening=S.dematOB||0;
+  var anyActivity=false;
+  var rowsHtml=MONTHS.map(function(m){
+    var inflow=S.txns.filter(function(t){return t.to===DEMAT_CK && inFY(t.date,fy) && toMon(t.date)===m;})
+      .reduce(function(a,t){return a+(+t.amt||0);},0);
+    var outflow=S.txns.filter(function(t){return t.from===DEMAT_CK && inFY(t.date,fy) && toMon(t.date)===m;})
+      .reduce(function(a,t){return a+(+t.amt||0);},0);
+    var monthOpening=opening;
+    var closing=monthOpening + inflow - outflow;
+    opening=closing; // carry forward
+    if(inflow===0 && outflow===0) return "";
+    anyActivity=true;
+    return "<tr>"+
+      "<td style=\"font-weight:600\">"+m+"</td>"+
+      "<td class=\"mono\" style=\"text-align:right;color:var(--text3)\">"+fmtF(monthOpening)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">"+(inflow?"+"+fmtF(inflow):"—")+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">"+(outflow?"-"+fmtF(outflow):"—")+"</td>"+
+      "<td class=\"mono\" style=\"font-weight:700;text-align:right\">"+fmtF(closing)+"</td>"+
+    "</tr>";
+  }).join("");
+  var totIn=S.txns.filter(function(t){return t.to===DEMAT_CK && inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
+  var totOut=S.txns.filter(function(t){return t.from===DEMAT_CK && inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
+  var finalBal=(S.dematOB||0)+totIn-totOut;
+  var wrap=document.getElementById("demat-wrap");
+  if(!wrap) return;
+  if(!anyActivity){
+    wrap.innerHTML="<div style=\"padding:22px;text-align:center;color:var(--text3);font-size:13px\">No wallet activity yet this year. Use <b>Log Profit / Funds</b> above, or add a transaction To \"Demat / Trading Wallet\".<br>Current balance: <b>"+fmtF(finalBal)+"</b></div>";
+    return;
+  }
+  wrap.innerHTML="<table class=\"tbl\" style=\"width:100%\"><thead><tr>"+
+    "<th style=\"text-align:left\">Month</th>"+
+    "<th style=\"text-align:right\">Opening</th>"+
+    "<th style=\"text-align:right\">Funds In (added + profit)</th>"+
+    "<th style=\"text-align:right\">Out (withdraw + loss)</th>"+
+    "<th style=\"text-align:right\">Closing</th>"+
+    "</tr></thead><tbody>"+rowsHtml+"</tbody>"+
+    "<tfoot><tr style=\"border-top:2px solid var(--border);font-weight:700\">"+
+      "<td>Total</td>"+
+      "<td class=\"mono\" style=\"text-align:right;color:var(--text3)\">"+fmtF(S.dematOB||0)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">+"+fmtF(totIn)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">-"+fmtF(totOut)+"</td>"+
+      "<td class=\"mono\" style=\"text-align:right;color:#15803d;background:#dcfce7;font-weight:800\">"+fmtF(finalBal)+"</td>"+
+    "</tr></tfoot></table>";
+}
+
+// Log a month-only profit (+) or loss (-) / funds as a wallet transaction
+function logDematEntry(){
+  ensureData();
+  var mon=document.getElementById("demat-log-month").value;
+  var type=document.getElementById("demat-log-type").value;
+  var amtRaw=document.getElementById("demat-log-amt").value;
+  var amt=parseFloat(amtRaw);
+  var statusEl=document.getElementById("demat-log-status");
+  function showStatus(msg,ok){ if(statusEl){ statusEl.textContent=msg; statusEl.style.color=ok?"var(--green)":"var(--red)"; } }
+  if(!mon){ showStatus("Pick a month",false); return; }
+  if(amtRaw===""||isNaN(amt)||amt<=0){ showStatus("Enter an amount greater than 0",false); return; }
+  var fy=getFY("invest");
+  // Build a date in the middle of the chosen month within this FY
+  var mi=MONTHS.indexOf(mon);
+  var calMonth=(mi+3)%12;            // Apr=0 -> calendar month 3
+  var year=(calMonth>=3)?fy:fy+1;    // Apr-Dec = fy, Jan-Mar = fy+1
+  var dateStr=year+"-"+String(calMonth+1).padStart(2,"0")+"-15";
+  var entry={date:dateStr, amt:amt, notes:""};
+  if(type==="profit"){ entry.from="Trading Profit"; entry.to=DEMAT_CK; entry.notes="Trading profit"; }
+  else if(type==="loss"){ entry.from=DEMAT_CK; entry.to="Trading Loss"; entry.notes="Trading loss"; }
+  else if(type==="funds"){ entry.from="Bank Transfer"; entry.to=DEMAT_CK; entry.notes="Funds added"; }
+  S.txns.push(entry);
+  save();
+  document.getElementById("demat-log-amt").value="";
+  showStatus("\u2713 "+mon+": "+(type==="loss"?"-":"+")+fmtF(amt)+" recorded", true);
+  renderDematWallet();
+  if(typeof renderTxn==="function") renderTxn();
+}
+
 function renderInvest(){
   ensureData();
   var fy=getFY('invest');
@@ -2322,6 +2475,14 @@ function renderInvest(){
     if(fyTotal>0)   pieFYData.push({l:inv.lbl,v:fyTotal,c:col});
     if(portTotal>0) piePortData.push({l:inv.lbl,v:portTotal,c:col});
   });
+  // Demat / Trading Wallet balance as its own slice
+  var dematIn=S.txns.filter(function(t){return t.to==='Demat Wallet'&&inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
+  var dematOut=S.txns.filter(function(t){return t.from==='Demat Wallet'&&inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
+  var dematBalFY=dematIn-dematOut;
+  var dematBalPort=(S.dematOB||0)+dematIn-dematOut;
+  var dematColor='#10b981';
+  if(dematBalFY>0)   pieFYData.push({l:'Demat Wallet',v:dematBalFY,c:dematColor});
+  if(dematBalPort>0) piePortData.push({l:'Demat Wallet',v:dematBalPort,c:dematColor});
   window._pieFYData=pieFYData;
   window._piePortData=piePortData;
   window._pieView=window._pieView||'portfolio';
@@ -2347,13 +2508,21 @@ function renderInvest(){
             return ' \u20b9'+c.raw.toLocaleString('en-IN')+' ('+((c.raw/total)*100).toFixed(1)+'%)';
           }}}}}
     });
-    if(legEl) legEl.innerHTML=data.map(function(d){
-      return '<div style="display:flex;align-items:center;gap:8px">'+ 
-        '<span style="width:10px;height:10px;border-radius:50%;background:'+d.c+';flex-shrink:0"></span>'+ 
-        '<span style="flex:1;color:var(--text2)">'+d.l+'</span>'+ 
-        '<span style="font-family:var(--mono);font-size:11px;color:var(--text3)">\u20b9'+d.v.toLocaleString('en-IN')+' ('+((d.v/total)*100).toFixed(1)+'%)</span>'+ 
-        '</div>';
-    }).join('');
+    if(legEl){
+      var totalLabel=(window._pieView==='fy')?'This Year':'Total Portfolio';
+      legEl.innerHTML='<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">'+
+        '<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600">'+totalLabel+'</div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--green);font-family:var(--mono);margin-top:2px">\u20b9'+total.toLocaleString('en-IN')+'</div>'+
+        '</div>'+
+        data.map(function(d){
+        return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'+ 
+          '<span style="width:9px;height:9px;border-radius:50%;background:'+d.c+';flex-shrink:0"></span>'+ 
+          '<span style="flex:1;color:var(--text2);font-size:12px">'+d.l+'</span>'+ 
+          '<span style="font-family:var(--mono);font-size:11px;color:var(--text3)">\u20b9'+d.v.toLocaleString('en-IN')+'</span>'+ 
+          '<span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);min-width:42px;text-align:right">'+((d.v/total)*100).toFixed(1)+'%</span>'+ 
+          '</div>';
+      }).join('');
+    }
   }
   function _syncPiePills(view){
     var bFY=document.getElementById('pie-toggle-fy');
@@ -2374,12 +2543,11 @@ function renderInvest(){
   // Ensure investOB (opening balances) exists in state
   if(!S.investOB) S.investOB={};
 
-  var info='<div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:var(--r-lg);padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#5b21b6">'+
-    '\ud83d\udccc Amounts pulled from Transaction Log. Log <b>From: any bank &rarr; To: SIP 1 \/ Stocks<\/b>. Rename SIPs in Settings.<\/div>';
+  var info='';  // moved to info icon in the table header
 
   var html=info+'<table style="font-size:11.5px"><thead><tr>'+
     '<th class="sticky-col" style="min-width:130px;background:var(--navy)">Investment<\/th>'+
-    '<th style="text-align:right;min-width:86px;background:#1e3a5f">Opening Bal.<\/th>'+
+    '<th style="text-align:right;min-width:110px;background:#1e3a5f">Opening Balance<\/th>'+
     MONTHS.map(function(m){return '<th style="text-align:right;min-width:52px;padding:6px 3px">'+m+'<\/th>';}).join('')+
     '<th style="text-align:right;min-width:70px;background:var(--navy2)">This FY<\/th>'+
     '<th style="text-align:right;min-width:86px;background:#14532d">Portfolio<\/th>'+
@@ -2415,14 +2583,16 @@ function renderInvest(){
     '<td style="padding:9px 12px;text-align:right;font-family:var(--mono);font-weight:700;color:#15803d;background:#dcfce7">'+fmtF(gPortfolio)+'<\/td>'+
     '<\/tr><\/tbody><\/table>';
 
-  // Notes below table
-  html+='<div style="margin-top:14px;padding:12px 16px;background:#f8fafc;border-radius:var(--r-lg);border:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.8">'+
-    '<b style="color:var(--text2)">&#128218; Notes</b><br>'+
-    '<b style="color:var(--text2)">Opening Balance</b> — The total amount you had already invested in this instrument <i>before</i> you started using this tracker. Enter it once; it stays fixed across all FYs as your historical cost basis.<br>'+
-    '<b style="color:var(--text2)">Portfolio Value</b> — Opening Balance + all investments logged this FY. This represents your total <i>invested cost</i> (not current market value). To track market value, update the opening balance each FY with your actual portfolio value at the start of the year.'+
+  // Notes section at the bottom of the investment table
+  html+='<div style="margin-top:14px;padding:12px 16px;background:#f8fafc;border-radius:var(--r-lg);border:1px solid var(--border);font-size:11.5px;color:var(--text3);line-height:1.7">'+
+    '<b style="color:var(--text2)">\ud83d\udcdd Notes</b><br>'+
+    '&bull; Amounts are pulled from your <b>Transaction Log<\/b>. To add: log From any bank To an investment (SIP \/ Stocks). Rename investments in Settings.<br>'+
+    '&bull; <b>Opening Balance<\/b> \u2014 what you had invested <i>before<\/i> using this tracker. Enter once; it stays fixed as your cost basis.<br>'+
+    '&bull; <b>Portfolio<\/b> \u2014 Opening Balance + all investments logged this FY (invested cost, not market value).'+
     '<\/div>';
 
   var iwEl=document.getElementById('inv-wrap'); if(iwEl) iwEl.innerHTML=html;
+  renderDematWallet();
 }
 
 // ═══ BUDGET ════════════════════════════════════════════
