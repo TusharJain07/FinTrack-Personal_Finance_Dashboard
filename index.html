@@ -626,11 +626,8 @@ tr:hover td{background:#f8fafc}
   <div style="background:linear-gradient(135deg,#0d1f40 0%,#070d1a 100%);border-radius:var(--r-lg);border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden;margin-bottom:18px">
     <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:14px;font-weight:600;color:#fff">Cash Flow</div>
-      <div style="font-size:11.5px;color:rgba(255,255,255,.4);margin-top:3px">Monthly Income vs Expenses — FY <span id="cf-fy-label"></span></div></div>
-      <div style="display:flex;gap:14px;font-size:11px;color:rgba(255,255,255,.65)">
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#34d399;display:inline-block"></span>Income</span>
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#f87171;display:inline-block"></span>Expenses</span>
-      </div>
+      <div style="font-size:11.5px;color:rgba(255,255,255,.4);margin-top:3px">Monthly cash flow by category — FY <span id="cf-fy-label"></span></div></div>
+      
     </div>
     <div style="padding:20px 20px 16px;background:rgba(0,0,0,.15)"><canvas id="cashflow-chart" height="110"></canvas></div>
   </div>
@@ -1759,6 +1756,12 @@ function populateTxnDropdowns(){
   var tSel=document.getElementById('txn-f-to');
   if(tSel&&document.activeElement!==tSel){
     var cv2=tSel.value; tSel.innerHTML='<option value="">All Categories</option>';
+    // Match Add Transaction 'To': bank/demat transfer targets first, then all sections
+    S.fromOptions.filter(function(g){return g.id==='banks'||g.id==='demat';}).forEach(function(g){
+      var og=document.createElement('optgroup');og.label=g.name+' (Transfer To)';
+      g.items.forEach(function(i){var o=document.createElement('option');o.value=i.ck;o.textContent=i.lbl;if(i.ck===cv2)o.selected=true;og.appendChild(o);});
+      tSel.appendChild(og);
+    });
     S.sections.forEach(function(sec){
       var og=document.createElement('optgroup');og.label=sec.name;
       sec.items.forEach(function(i){var o=document.createElement('option');o.value=i.ck;o.textContent=i.lbl;if(i.ck===cv2)o.selected=true;og.appendChild(o);});
@@ -2004,23 +2007,22 @@ function renderDash() {
   var invByMon=MONTHS.map(function(m){return sumSection('investments',m,fy);});
   var loanByMon=MONTHS.map(function(m){return sumSection('loans',m,fy);});
   var ccByMon=MONTHS.map(function(m){return sumSection('ccbills',m,fy);});
-  // 'Expenses' segment = total non-bank outflow minus the categorised sections above
-  var expCatByMon=MONTHS.map(function(m,i){
-    var other=expByMon[i]-invByMon[i]-loanByMon[i]-ccByMon[i];
-    return other>0?other:0;
-  });
+  // 'Expenses' segment = the expenses section only (accurate, no subtraction errors)
+  var expCatByMon=MONTHS.map(function(m){return sumSection('expenses',m,fy);});
+  // Build datasets based on which KPIs are enabled, using pie-chart colors
+  var cfgDash=(S.kpiConfig&&S.kpiConfig.dash)?S.kpiConfig.dash:{};
+  var cfDatasets=[];
+  if(cfgDash.showIncome!==false) cfDatasets.push({label:'Income',data:incByMon,backgroundColor:'#10b981',borderRadius:4,borderSkipped:false});
+  if(cfgDash.showExpenses!==false) cfDatasets.push({label:'Expenses',data:expCatByMon,backgroundColor:'#f59e0b',borderRadius:4,borderSkipped:false});
+  if(cfgDash.showInvestments!==false) cfDatasets.push({label:'Investments',data:invByMon,backgroundColor:'#7c3aed',borderRadius:4,borderSkipped:false});
+  if(cfgDash.showLoans!==false) cfDatasets.push({label:'Loans / EMI',data:loanByMon,backgroundColor:'#2563eb',borderRadius:4,borderSkipped:false});
+  if(cfgDash.showCC!==false) cfDatasets.push({label:'CC Bills',data:ccByMon,backgroundColor:'#ef4444',borderRadius:4,borderSkipped:false});
   setTimeout(function(){
     // Cash Flow Chart
     var cfCtx=document.getElementById('cashflow-chart'); if(!cfCtx) return;
     if(_cashflowChart){_cashflowChart.destroy();_cashflowChart=null;}
     _cashflowChart=new Chart(cfCtx,{type:'bar',
-      data:{labels:MONTHS,datasets:[
-        {label:'Income',data:incByMon,backgroundColor:'#34d399',borderRadius:5,borderSkipped:false},
-        {label:'Expenses',data:expCatByMon,backgroundColor:'#f87171',borderRadius:{topLeft:0,topRight:0,bottomLeft:5,bottomRight:5},borderSkipped:false},
-        {label:'Investments',data:invByMon,backgroundColor:'#7c3aed',borderRadius:0,borderSkipped:false},
-        {label:'Loans / EMI',data:loanByMon,backgroundColor:'#d97706',borderRadius:0,borderSkipped:false},
-        {label:'CC Bills',data:ccByMon,backgroundColor:'#2563eb',borderRadius:{topLeft:5,topRight:5,bottomLeft:0,bottomRight:0},borderSkipped:false}
-      ]},
+      data:{labels:MONTHS,datasets:cfDatasets},
       options:{responsive:true,maintainAspectRatio:true,
         plugins:{legend:{display:true,position:'bottom',labels:{color:'rgba(255,255,255,.7)',font:{size:10},boxWidth:12,padding:10,usePointStyle:true,pointStyle:'rectRounded'}},
           tooltip:{backgroundColor:'rgba(7,13,26,.95)',titleColor:'#fff',bodyColor:'rgba(255,255,255,.75)',
@@ -2375,6 +2377,31 @@ function setDematOB(v){
   save();
   renderDematWallet();
 }
+// Delete all demat wallet transactions for a given month (this FY)
+function deleteDematMonth(mon){
+  ensureData();
+  var fy=getFY("invest");
+  var toDelete=S.txns.filter(function(t){
+    return (t.to===DEMAT_CK || t.from===DEMAT_CK) && inFY(t.date,fy) && toMon(t.date)===mon;
+  });
+  if(toDelete.length===0) return;
+  askConfirm(
+    "Delete "+mon+" wallet entries",
+    "This will remove all "+toDelete.length+" Demat Wallet transaction"+(toDelete.length===1?"":"s")+" in "+mon+" (funds, profit, loss, withdrawals). This cannot be undone.",
+    function(){
+      S.txns=S.txns.filter(function(t){
+        return !((t.to===DEMAT_CK || t.from===DEMAT_CK) && inFY(t.date,fy) && toMon(t.date)===mon);
+      });
+      save();
+      renderDematWallet();
+      if(typeof renderTxn==="function") renderTxn();
+      if(typeof renderInvest==="function") renderInvest();
+      toast(mon+" wallet entries deleted");
+    },
+    "Delete"
+  );
+}
+
 function renderDematWallet(){
   ensureData();
   var fy=getFY("invest");
@@ -2401,6 +2428,7 @@ function renderDematWallet(){
       "<td class=\"mono\" style=\"color:var(--green);text-align:right\">"+(inflow?"+"+fmtF(inflow):"—")+"</td>"+
       "<td class=\"mono\" style=\"color:var(--red);text-align:right\">"+(outflow?"-"+fmtF(outflow):"—")+"</td>"+
       "<td class=\"mono\" style=\"font-weight:700;text-align:right\">"+fmtF(closing)+"</td>"+
+      "<td style=\"text-align:center\"><button onclick=\"deleteDematMonth('"+m+"')\" title=\"Delete all "+m+" wallet entries\" style=\"background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px\">&#128465;</button></td>"+
     "</tr>";
   }).join("");
   var totIn=S.txns.filter(function(t){return t.to===DEMAT_CK && inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
@@ -2418,6 +2446,7 @@ function renderDematWallet(){
     "<th style=\"text-align:right\">Funds In (added + profit)</th>"+
     "<th style=\"text-align:right\">Out (withdraw + loss)</th>"+
     "<th style=\"text-align:right\">Closing</th>"+
+    "<th style=\"text-align:center;width:40px\"></th>"+
     "</tr></thead><tbody>"+rowsHtml+"</tbody>"+
     "<tfoot><tr style=\"border-top:2px solid var(--border);font-weight:700\">"+
       "<td>Total</td>"+
@@ -2425,6 +2454,7 @@ function renderDematWallet(){
       "<td class=\"mono\" style=\"color:var(--green);text-align:right\">+"+fmtF(totIn)+"</td>"+
       "<td class=\"mono\" style=\"color:var(--red);text-align:right\">-"+fmtF(totOut)+"</td>"+
       "<td class=\"mono\" style=\"text-align:right;color:#15803d;background:#dcfce7;font-weight:800\">"+fmtF(finalBal)+"</td>"+
+      "<td></td>"+
     "</tr></tfoot></table>";
 }
 
