@@ -714,7 +714,7 @@ tr:hover td{background:#f8fafc}
     </div>
     
     <div style="padding:10px 16px 14px;border-bottom:1px solid var(--border);background:rgba(124,58,237,.04)">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">Log Profit / Funds (month-wise)</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">Log Funds / Profit / Loss / Withdraw (month-wise)</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="demat-log-month" style="padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px;max-width:120px">
           <option value="">Month</option>
@@ -723,9 +723,10 @@ tr:hover td{background:#f8fafc}
           <option>Dec</option><option>Jan</option><option>Feb</option><option>Mar</option>
         </select>
         <select id="demat-log-type" style="padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px">
+          <option value="funds">Add Funds (+)</option>
           <option value="profit">Profit (+)</option>
           <option value="loss">Loss (&minus;)</option>
-          <option value="funds">Add Funds (+)</option>
+          <option value="withdraw">Withdraw (&minus;)</option>
         </select>
         <input type="number" id="demat-log-amt" placeholder="Amount" style="width:120px;padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:8px"/>
         <button class="btn btn-blue" style="padding:7px 14px;font-size:13px" onclick="logDematEntry()">+ Log</button>
@@ -737,7 +738,8 @@ tr:hover td{background:#f8fafc}
       <b style="color:var(--text2)">&#128221; Notes</b><br>
       &bull; <b>Add money:</b> record a transaction From your bank To &ldquo;Demat Wallet&rdquo; (or use Log Funds above).<br>
       &bull; <b>Profit:</b> use <b>Log Profit</b> above, or record From an income source To &ldquo;Demat Wallet&rdquo;.<br>
-      &bull; <b>Withdraw / Loss:</b> record From &ldquo;Demat Wallet&rdquo; To your bank, or use Log Loss above.<br>
+      &bull; <b>Loss:</b> use <b>Log Loss</b> above (money lost in the market, not withdrawn).<br>
+      &bull; <b>Withdraw:</b> use <b>Log Withdraw</b>, or record From &ldquo;Demat Wallet&rdquo; To your bank.<br>
       &bull; Each month's opening balance carries forward automatically from the previous month's closing.
     </div>
   </div>
@@ -2402,6 +2404,23 @@ function deleteDematMonth(mon){
   );
 }
 
+// Classify a Demat Wallet transaction into a type for column display
+function dematTxnType(t){
+  // Loss: money leaves wallet to the Trading Loss marker
+  if(t.from===DEMAT_CK && t.to==="Trading Loss") return "loss";
+  // Profit: comes in from the Trading Profit marker
+  if(t.to===DEMAT_CK && t.from==="Trading Profit") return "profit";
+  // Outflow from wallet to a real bank (or Bank Transfer marker) = withdrawal
+  if(t.from===DEMAT_CK){
+    return "withdraw";
+  }
+  // Inflow to wallet from anywhere else (bank, income, Bank Transfer) = funds added
+  if(t.to===DEMAT_CK){
+    return "funds";
+  }
+  return "other";
+}
+
 function renderDematWallet(){
   ensureData();
   var fy=getFY("invest");
@@ -2412,23 +2431,35 @@ function renderDematWallet(){
   // Starting opening (Apr) = S.dematOB.
   var opening=S.dematOB||0;
   var anyActivity=false;
+  var sumF=0,sumP=0,sumL=0,sumW=0;
   var rowsHtml=MONTHS.map(function(m){
-    var inflow=S.txns.filter(function(t){return t.to===DEMAT_CK && inFY(t.date,fy) && toMon(t.date)===m;})
-      .reduce(function(a,t){return a+(+t.amt||0);},0);
-    var outflow=S.txns.filter(function(t){return t.from===DEMAT_CK && inFY(t.date,fy) && toMon(t.date)===m;})
-      .reduce(function(a,t){return a+(+t.amt||0);},0);
+    var monTx=S.txns.filter(function(t){return (t.to===DEMAT_CK||t.from===DEMAT_CK) && inFY(t.date,fy) && toMon(t.date)===m;});
+    var fAdd=0,fProfit=0,fLoss=0,fWith=0;
+    monTx.forEach(function(t){
+      var ty=dematTxnType(t), a=(+t.amt||0);
+      if(ty==="funds") fAdd+=a;
+      else if(ty==="profit") fProfit+=a;
+      else if(ty==="loss") fLoss+=a;
+      else if(ty==="withdraw") fWith+=a;
+    });
+    var inflow=fAdd+fProfit;
+    var outflow=fLoss+fWith;
     var monthOpening=opening;
     var closing=monthOpening + inflow - outflow;
-    opening=closing; // carry forward
+    opening=closing;
     if(inflow===0 && outflow===0) return "";
     anyActivity=true;
+    sumF+=fAdd; sumP+=fProfit; sumL+=fLoss; sumW+=fWith;
+    var dash="—";
     return "<tr>"+
       "<td style=\"font-weight:600\">"+m+"</td>"+
       "<td class=\"mono\" style=\"text-align:right;color:var(--text3)\">"+fmtF(monthOpening)+"</td>"+
-      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">"+(inflow?"+"+fmtF(inflow):"—")+"</td>"+
-      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">"+(outflow?"-"+fmtF(outflow):"—")+"</td>"+
+      "<td class=\"mono\" style=\"color:#0369a1;text-align:right\">"+(fAdd?"+"+fmtF(fAdd):dash)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">"+(fProfit?"+"+fmtF(fProfit):dash)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">"+(fLoss?"-"+fmtF(fLoss):dash)+"</td>"+
+      "<td class=\"mono\" style=\"color:#d97706;text-align:right\">"+(fWith?"-"+fmtF(fWith):dash)+"</td>"+
       "<td class=\"mono\" style=\"font-weight:700;text-align:right\">"+fmtF(closing)+"</td>"+
-      "<td style=\"text-align:center\"><button onclick=\"deleteDematMonth('"+m+"')\" title=\"Delete all "+m+" wallet entries\" style=\"background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px\">&#128465;</button></td>"+
+      "<td class=\"mono\" style=\"text-align:center\"><button onclick=\"deleteDematMonth(\'"+m+"\')\" title=\"Delete all "+m+" wallet entries\" style=\"background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px\">&#128465;</button></td>"+
     "</tr>";
   }).join("");
   var totIn=S.txns.filter(function(t){return t.to===DEMAT_CK && inFY(t.date,fy);}).reduce(function(a,t){return a+(+t.amt||0);},0);
@@ -2440,19 +2471,23 @@ function renderDematWallet(){
     wrap.innerHTML="<div style=\"padding:22px;text-align:center;color:var(--text3);font-size:13px\">No wallet activity yet this year. Use <b>Log Profit / Funds</b> above, or add a transaction To \"Demat / Trading Wallet\".<br>Current balance: <b>"+fmtF(finalBal)+"</b></div>";
     return;
   }
-  wrap.innerHTML="<table class=\"tbl\" style=\"width:100%\"><thead><tr>"+
+  wrap.innerHTML="<table class=\"tbl\" style=\"width:100%;font-size:11.5px\"><thead><tr>"+
     "<th style=\"text-align:left\">Month</th>"+
     "<th style=\"text-align:right\">Opening</th>"+
-    "<th style=\"text-align:right\">Funds In (added + profit)</th>"+
-    "<th style=\"text-align:right\">Out (withdraw + loss)</th>"+
+    "<th style=\"text-align:right\">Add Funds</th>"+
+    "<th style=\"text-align:right\">Profit</th>"+
+    "<th style=\"text-align:right\">Loss</th>"+
+    "<th style=\"text-align:right\">Withdraw</th>"+
     "<th style=\"text-align:right\">Closing</th>"+
     "<th style=\"text-align:center;width:40px\"></th>"+
     "</tr></thead><tbody>"+rowsHtml+"</tbody>"+
     "<tfoot><tr style=\"border-top:2px solid var(--border);font-weight:700\">"+
       "<td>Total</td>"+
       "<td class=\"mono\" style=\"text-align:right;color:var(--text3)\">"+fmtF(S.dematOB||0)+"</td>"+
-      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">+"+fmtF(totIn)+"</td>"+
-      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">-"+fmtF(totOut)+"</td>"+
+      "<td class=\"mono\" style=\"color:#0369a1;text-align:right\">+"+fmtF(sumF)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--green);text-align:right\">+"+fmtF(sumP)+"</td>"+
+      "<td class=\"mono\" style=\"color:var(--red);text-align:right\">-"+fmtF(sumL)+"</td>"+
+      "<td class=\"mono\" style=\"color:#d97706;text-align:right\">-"+fmtF(sumW)+"</td>"+
       "<td class=\"mono\" style=\"text-align:right;color:#15803d;background:#dcfce7;font-weight:800\">"+fmtF(finalBal)+"</td>"+
       "<td></td>"+
     "</tr></tfoot></table>";
@@ -2479,6 +2514,7 @@ function logDematEntry(){
   if(type==="profit"){ entry.from="Trading Profit"; entry.to=DEMAT_CK; entry.notes="Trading profit"; }
   else if(type==="loss"){ entry.from=DEMAT_CK; entry.to="Trading Loss"; entry.notes="Trading loss"; }
   else if(type==="funds"){ entry.from="Bank Transfer"; entry.to=DEMAT_CK; entry.notes="Funds added"; }
+  else if(type==="withdraw"){ entry.from=DEMAT_CK; entry.to="Bank Transfer"; entry.notes="Withdrawal to bank"; }
   S.txns.push(entry);
   save();
   document.getElementById("demat-log-amt").value="";
